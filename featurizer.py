@@ -1,38 +1,16 @@
-from analyzer import loadFile,pathlength,distance,aspectratio,speed,acccomponent,hist,append,ids
+from analyzer import hist,ids,pathiter,featurize,featureTitle
 import numpy as np
-import os,threading
-
-def featurize(filename):
-    trajactory = loadFile(filename)
-    timeTravel = len(trajactory)
-    dirn,filen = ids(filename)
-
-    pathlen = pathlength(trajactory)
-    dist = distance(trajactory)
-    ar = aspectratio(trajactory)
-
-    sp = speed(trajactory)
-    accd,accl = acccomponent(trajactory)
-    return [filen,dirn, timeTravel, pathlen, dist, ar
-    , np.median(sp),   np.mean(sp),   np.std(sp),   max(sp)
-    , np.median(accd), np.mean(accd), np.std(accd)
-    , np.median(accl), np.mean(accl), np.std(accl)]
-
-# Processing of all files in a basepath (in a single thread)
-#basepath may be a directory, or a file. vec must be a list or tuple
-def pathiter(basepath, vec):
-    if os.path.isfile(basepath) and basepath.endswith('.csv'):
-    #    print 'processing file {}'.format(basepath)
-        vec.append(featurize(basepath))
-    elif os.path.isdir(basepath):
-        for p in os.listdir(basepath):
-            pathiter(os.path.join(basepath,p), vec)
+import os,threading,csv
+#import math,csv,os
 
 #process the group of files under basepath in a batch
 def pathgroupiter(basepath, files, vec):
+    def proc(basepath):
+        vec.append(featurize(basepath))
+
     for f in files:
         print '{} processes file {}...'.format(threading.current_thread().getName(), f)
-        pathiter(os.path.join(basepath,f), vec)
+        pathiter(os.path.join(basepath,f), proc)
 
 def partlistdir(basepath, fanout):
     paths = os.listdir(basepath)
@@ -41,13 +19,23 @@ def partlistdir(basepath, fanout):
     for i in xrange(0, len(paths), chunksize):
         yield paths[i:i+chunksize]
 
+#append data to file
+def append(file, data):
+    if data:
+        with open(file, 'a') as fp:
+            a = csv.writer(fp, delimiter=',');
+            a.writerows(data);
+
 # Concurrent processing of all files in a basepath
 #basepath must be a directory, vec may be a list
 def concurpathiter(basepath, datafile, fanout):
     if os.path.isfile(basepath):
         vec = []
-        pathiter(basepath, vec)
+        def proc(basepath):
+            vec.append(featurize(basepath))
+        pathiter(basepath, proc)
         append(datafile, vec)
+        return
 
     threads = {}
     import time
@@ -61,16 +49,10 @@ def concurpathiter(basepath, datafile, fanout):
         threads[t] = vec
 
     #wait for all threads to terminate
-    while threads:
-        remainingThreads = {}
-        for t in threads:
-            vec = threads[t]
-            if t.isAlive():
-                remainingThreads[t]= vec
-            else:
-                append(datafile,vec)
-        threads = remainingThreads
-
+    for t in threads:
+        t.join()
+        vec = threads[t]
+        append(datafile,vec)
 
 RESOURCES_DIR = 'resources'
 
@@ -89,11 +71,9 @@ if __name__ == '__main__':
         if os.path.exists(datafile):
             os.remove(datafile)
         concurpathiter(basepath, datafile, fanout)
-    title = ['filenum', 'drivernum', 'pathlen', 'dist', 'ar'
-      , 'median(sp)',   'mean(sp)',   'std(sp)',   'max(sp)'
-      , 'median(accd)', 'mean(accd)', 'std(accd)'
-      , 'median(accl)', 'mean(accl)', 'std(accl)']
-
-    vec = np.genfromtxt(datafile, delimiter=',')
-    plt = hist({'data':vec, 'title':title})
-    plt.savefig(os.path.join(RESOURCES_DIR,'hist.png'), bbox_inches='tight')
+        title = featureTitle()
+        vec = np.genfromtxt(datafile, delimiter=',')
+        drivernums = set(vec[:,1])
+        for d in drivernums:
+            plt = hist({'data':vec[vec[:,1] == d], 'title':title+'-'+str(d)})
+            plt.savefig(os.path.join(RESOURCES_DIR,'hist-'+str(d)+'.png'), bbox_inches='tight')

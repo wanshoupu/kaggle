@@ -5,25 +5,35 @@ max
 round-trip
 
 
-Speed:
-avg
-max
-median
-quad
+1. avg Speed
+2. max speed
+3. median speed
+4. avg in-path-acceleration
+5. avg swaying-acceleration
+6. max acceleration
+7. change lane pattern:
+-----
+     \
+      \
+        ------
+8. Length to complete a change-lane
+9. Time to complete a change-lane
+10. Frequency of change-lane
 
-Acceleration:
-avg
-max
-median
-side-component
-in-path-component
-quad
+
+Behavior at red light / stop sign (going straight)
+10. Habit to change lane within 100 yard of approaching red light?
+Behavior at right-turn
+11. Stop completely
+12. Running through at low speed
+13. Running thru at high speed
 
 Time of travel
 
 Number of turns per 1000 meter
 Number of stops per 1000 meter
 Via points per trip
+
 
 Definition of a turn:
 The arc degree > 60 && the arc length < 50 meter
@@ -34,6 +44,9 @@ Common measures
 15 MPH = 6.7 mps (meter per second)
 60 MPH = 26.8 mps
 25 MPH = 11.2 mps
+
+Lane width 
+10 feet = 3.1 meters
 
 street width 
 40 feet = 12.2 meters
